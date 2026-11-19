@@ -1,5 +1,11 @@
+import os
+import sys
 import torch
 import torch.nn as nn
+
+# Ensure project root is always in path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 from src.lora_scratch import LoRALinear
 
 
@@ -33,7 +39,7 @@ def test_lora_merge_weights_equivalence():
     linear = nn.Linear(dim, dim)
     lora = LoRALinear(linear, rank=4, alpha=8.0)
 
-    # Simulate non-zero B to have an active adaptation
+    # Simulate non-zero B to verify active adaptation merge
     nn.init.normal_(lora.lora_B, std=0.02)
 
     x = torch.randn(4, 10, dim)
