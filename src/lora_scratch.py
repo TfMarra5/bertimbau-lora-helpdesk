@@ -1,18 +1,18 @@
 """
 lora_scratch.py
-================
-Implementação pura e didática do Low-Rank Adaptation (LoRA) em PyTorch
-sem depender de bibliotecas externas (como peft).
+===============
+Educational, pure PyTorch implementation of Low-Rank Adaptation (LoRA)
+from scratch without relying on third-party libraries (such as peft).
 
-Conceito Matemático:
---------------------
-Dado um peso base W_0 de dimensao [d_out, d_in]:
-Em vez de atualizar W_0 diretamente, mantemos W_0 congelado e adicionamos:
+Mathematical Foundation:
+------------------------
+Given a pre-trained base weight matrix W_0 in R^[d_out, d_in]:
+Instead of directly modifying W_0 during fine-tuning, W_0 remains frozen:
     W = W_0 + (alpha / r) * (B @ A)
 
-Onde:
-    A in R^[r, d_in]  (inicializado com Gaussiana)
-    B in R^[d_out, r] (inicializado com zeros)
+Where:
+    A in R^[r, d_in]  (initialized with Gaussian distribution)
+    B in R^[d_out, r] (initialized strictly to zeros)
     r << min(d_in, d_out)
 """
 
@@ -23,7 +23,7 @@ import torch.nn as nn
 
 class LoRALinear(nn.Module):
     """
-    Camada Linear encapsulada com adaptação LoRA de baixo rank.
+    Standard Linear layer wrapped with Low-Rank Adaptation (LoRA).
     """
     def __init__(
         self,
@@ -38,7 +38,7 @@ class LoRALinear(nn.Module):
         self.alpha = alpha
         self.scaling = alpha / rank
 
-        # 1. Congelar os parâmetros originais da rede
+        # 1. Freeze base model parameters
         self.original_linear.weight.requires_grad = False
         if self.original_linear.bias is not None:
             self.original_linear.bias.requires_grad = False
@@ -46,94 +46,88 @@ class LoRALinear(nn.Module):
         in_features = original_linear.in_features
         out_features = original_linear.out_features
 
-        # 2. Criar as matrizes de projeção de baixo rank (A e B)
-        # Matriz A: projeta de in_features -> rank
+        # 2. Low-rank projection matrices (A and B)
+        # Matrix A: projects from in_features -> rank
         self.lora_A = nn.Parameter(torch.empty(rank, in_features))
-        # Matriz B: projeta de rank -> out_features
+        # Matrix B: projects from rank -> out_features
         self.lora_B = nn.Parameter(torch.empty(out_features, rank))
 
-        # Dropout opcional para regularização
+        # Optional dropout
         self.dropout = nn.Dropout(p=dropout) if dropout > 0.0 else nn.Identity()
 
-        # 3. Inicialização idêntica ao paper original do LoRA (Hu et al., 2021):
-        # A com inicialização Kaiming/Gaussiana
+        # 3. Initialization following Hu et al., 2021:
+        # A initialized with Kaiming uniform
         nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5))
-        # B com ZEROS absolutos!
-        # Isso garante que B @ A = 0 no início do treino:
-        # o modelo começa exatamente com o mesmo comportamento do modelo pré-treinado!
+        # B initialized to strictly ZERO
+        # This guarantees B @ A = 0 initially, preserving base model behavior exactly.
         nn.init.zeros_(self.lora_B)
 
         self.merged = False
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.merged:
-            # Se já fundido, comporta-se como uma camada linear convencional
             return self.original_linear(x)
 
-        # Saída do modelo base congelado: W_0 @ x
+        # Base forward pass with frozen weights: x @ W_0.T
         base_out = self.original_linear(x)
 
-        # Caminho LoRA: x -> Dropout -> A^T -> B^T * scaling
-        # x tem dimensão [batch, seq_len, in_features]
-        # (x @ A.T) resulta em [batch, seq_len, rank]
-        # (resultado @ B.T) resulta em [batch, seq_len, out_features]
+        # LoRA forward pass: x -> Dropout -> A.T -> B.T * scaling
         lora_out = (self.dropout(x) @ self.lora_A.t()) @ self.lora_B.t()
-        
+
         return base_out + (lora_out * self.scaling)
 
     def merge_weights(self):
         """
-        Funde Delta W = (alpha/r) * (B @ A) diretamente no peso W_0 original.
-        Elimina completamente qualquer custo de latência adicional na inferência!
+        Merges Delta W = (alpha/r) * (B @ A) directly into original W_0.
+        Eliminates any additional inference latency overhead!
         """
         if not self.merged:
             with torch.no_grad():
                 delta_w = (self.lora_B @ self.lora_A) * self.scaling
                 self.original_linear.weight.data += delta_w
             self.merged = True
-            print("Pesos LoRA fundidos com sucesso a W_0 original!")
+            print("Successfully merged LoRA weights into original W_0!")
 
     def unmerge_weights(self):
-        """Desfaz a fusão para continuar treinando se necessário."""
+        """Unmerges LoRA weights if further fine-tuning is required."""
         if self.merged:
             with torch.no_grad():
                 delta_w = (self.lora_B @ self.lora_A) * self.scaling
                 self.original_linear.weight.data -= delta_w
             self.merged = False
-            print("Pesos LoRA separados de W_0.")
+            print("LoRA weights unmerged from W_0.")
 
 
 if __name__ == "__main__":
     print("=" * 65)
-    print("DEMONSTRAÇÃO MATEMÁTICA: LoRA DO ZERO (PyTorch Puro)")
+    print("MATHEMATICAL DEMO: LoRA FROM SCRATCH (Pure PyTorch)")
     print("=" * 65)
 
-    # Simular uma camada típica de atenção do BERTimbau (768 x 768)
+    # Simulate standard BERT-base attention projection layer (768 x 768)
     in_dim, out_dim = 768, 768
-    camada_padrao = nn.Linear(in_dim, out_dim)
+    standard_linear = nn.Linear(in_dim, out_dim)
 
-    params_original = sum(p.numel() for p in camada_padrao.parameters())
-    print(f"Parâmetros da camada original ({in_dim}x{out_dim}): {params_original:,}")
+    orig_params = sum(p.numel() for p in standard_linear.parameters())
+    print(f"Original linear layer parameters ({in_dim}x{out_dim}): {orig_params:,}")
 
-    # Aplicar nosso LoRALinear com rank r=8
-    camada_lora = LoRALinear(camada_padrao, rank=8, alpha=16.0)
+    # Wrap with LoRALinear (rank r=8)
+    lora_linear = LoRALinear(standard_linear, rank=8, alpha=16.0)
 
-    params_treinaveis = sum(p.numel() for p in camada_lora.parameters() if p.requires_grad)
-    params_totais = sum(p.numel() for p in camada_lora.parameters())
+    trainable_params = sum(p.numel() for p in lora_linear.parameters() if p.requires_grad)
+    print(f"Trainable parameters (LoRA A + B): {trainable_params:,}")
+    print(f"Trainable parameter reduction: {100 * (1 - trainable_params / orig_params):.2f}%")
+    print(f"FP32 memory footprint:")
+    print(f"  - Full layer: {orig_params * 4 / 1024:.2f} KB")
+    print(f"  - LoRA only:   {trainable_params * 4 / 1024:.2f} KB (Only ~48 KB!)")
 
-    print(f"Parâmetros treináveis (LoRA A + B): {params_treinaveis:,}")
-    print(f"Redução de parâmetros treináveis: {100 * (1 - params_treinaveis / params_original):.2f}%")
-    print(f"Tamanho em memória de float32:")
-    print(f"  - Camada completa: {params_original * 4 / 1024:.2f} KB")
-    print(f"  - Apenas LoRA:     {params_treinaveis * 4 / 1024:.2f} KB (Apenas ~48 KB!)")
+    # Verify forward pass
+    x = torch.randn(2, 16, in_dim)  # Batch=2, Seq=16, Dim=768
+    out = lora_linear(x)
+    print(f"\nOutput tensor shape: {out.shape} (Matches standard linear!)")
 
-    # Teste de inferência
-    x = torch.randn(2, 16, in_dim) # Batch=2, Seq=16, Dim=768
-    saida = camada_lora(x)
-    print(f"\nFormato da saída: {saida.shape} (Idêntico ao original!)")
-
-    # Demonstração de Fusão (Merge)
-    camada_lora.merge_weights()
-    saida_fundida = camada_lora(x)
-    print(f"Diferença após fusão: {torch.norm(saida - saida_fundida).item():.6f} (Perfeita equivalência!)")
+    # Verify weight merging
+    lora_linear.merge_weights()
+    merged_out = lora_linear(x)
+    diff = torch.norm(out - merged_out).item()
+    print(f"Output divergence after merge: {diff:.6f} (Exact numerical match!)")
     print("=" * 65)

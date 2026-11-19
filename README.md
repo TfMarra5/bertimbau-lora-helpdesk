@@ -1,142 +1,138 @@
-# 🚀 Como 1.2 MB Ajustam uma IA de 110 Milhões de Parâmetros? (LoRA na Prática)
+# How 1.2 MB Fine-Tunes a 110M Parameter AI: LoRA from Scratch
 
-<p align="center">
-  <img src="https://img.shields.io/badge/PyTorch-2.0+-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" />
-  <img src="https://img.shields.io/badge/Hugging%20Face-PEFT-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black" />
-  <img src="https://img.shields.io/badge/BERTimbau-110M%20Params-blue?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Adapter%20Size-1.16%20MB-success?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
-</p>
+[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-EE4C2C.svg?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Hugging Face PEFT](https://img.shields.io/badge/PEFT-0.9+-yellow.svg)](https://github.com/huggingface/peft)
+[![Model](https://img.shields.io/badge/BERT--Base-110M_Params-green.svg)](https://huggingface.co/bert-base-uncased)
+[![Adapter Size](https://img.shields.io/badge/Adapter_Size-1.16_MB-brightgreen.svg)]()
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Este repositório demonstra, de forma prática e matemática, como a técnica de **LoRA (Low-Rank Adaptation)** permite especializar um modelo de linguagem com mais de **110 milhões de parâmetros** (o **BERTimbau**) salvando um arquivo final de **apenas ~1.2 MB**, com acurácia próxima de 100% no domínio escolhido.
-
----
-
-## 📌 O Caso de Uso: Helpdesk & Suporte de TI em Português
-
-Classificador de intenções para automatizar o encaminhamento e triagem de chamados corporativos de TI:
-1. `RESET_SENHA` — Esquecimento de senha, expiração de credencial, conta bloqueada no AD.
-2. `PROBLEMA_ACESSO` — Falha na VPN, permissão em pastas de rede, erro 403.
-3. `FALHA_HARDWARE` — Monitores apagados, notebook não liga, problemas de periféricos.
-4. `INSTALACAO_SOFTWARE` — Pedidos de VS Code, Docker, licenças de Office e plugins.
-5. `LENTIDAO_REDE` — Wi-Fi instável, alta latência em chamadas, perda de pacotes.
-6. `DUVIDA_GERAL` — Políticas de backup, horários do suporte, procedimentos internos.
+An educational and production-ready repository demonstrating how **Low-Rank Adaptation (LoRA)** fine-tunes a **110 million parameter** Transformer (`bert-base-uncased`) using an adapter checkpoint of **only ~1.2 MB** while preserving near-perfect task accuracy.
 
 ---
 
-## 🧠 A Matemática por trás do LoRA
+## 📌 Project Overview & Use Case
 
-No **Fine-Tuning Tradicional**, você atualiza toda a matriz de pesos $W_0 \in \mathbb{R}^{d \times k}$:
-$$W_{novo} = W_0 + \Delta W$$
-Isso exige salvar todos os 110 milhões de parâmetros novamente (~440 MB em FP32).
+We train a specialized intent classification engine for enterprise **IT Helpdesk & Support Tickets**:
 
-O **LoRA** (*Hu et al., 2021*) assume que a variação $\Delta W$ possui uma **dimensão intrínseca baixa** (*low intrinsic rank*). Ele decompõe a atualização na multiplicação de duas matrizes muito menores:
+1. `PASSWORD_RESET` — Expired passwords, account lockout, credential renewal.
+2. `ACCESS_ISSUE` — VPN authentication, shared network drive permissions, 403 errors.
+3. `HARDWARE_FAILURE` — Monitor blackouts, laptop boot failures, stuck peripherals.
+4. `SOFTWARE_INSTALL` — Deployment requests for VS Code, Docker, Office suites.
+5. `NETWORK_LATENCY` — Wi-Fi drops, high ping latency, video conference jitter.
+6. `GENERAL_QUERY` — IT policies, equipment return procedures, support SLAs.
 
+---
+
+## 🧠 Mathematical Foundation
+
+In **Standard Full Fine-Tuning**, every weight matrix $W_0 \in \mathbb{R}^{d_{out} \times d_{in}}$ is updated:
+$$W = W_0 + \Delta W$$
+For a 110M model, storing $\Delta W$ requires saving the entire model again (~440 MB in FP32).
+
+**LoRA** (*Hu et al., 2021*) decomposes the update $\Delta W$ into the product of two low-rank matrices:
 $$\Delta W = \frac{\alpha}{r} (B \cdot A)$$
 
-Onde:
-* $A \in \mathbb{R}^{r \times d_{in}}$ (inicializada com distribuição Gaussiana)
-* $B \in \mathbb{R}^{d_{out} \times r}$ (inicializada com **zeros**, garantindo que $\Delta W = 0$ no início)
-* $r \ll \min(d_{in}, d_{out})$ (ex: $r = 8$)
+Where:
+* $A \in \mathbb{R}^{r \times d_{in}}$: initialized via Gaussian distribution.
+* $B \in \mathbb{R}^{d_{out} \times r}$: initialized strictly to **zero** (ensuring $\Delta W = 0$ at training onset).
+* $r \ll \min(d_{in}, d_{out})$ (e.g., $r = 8$).
 
 ```
-          [   W_0   ]  (768 x 768) -> CONGELADO (requires_grad = False)
-               +
-  [ B ] (768 x 8)  x  [ A ] (8 x 768) -> TREINÁVEIS (Apenas 12.288 parâmetros!)
+           [     W_0     ]  (768 x 768)  --> FROZEN (requires_grad = False)
+                  +
+     [  B  ] (768 x 8)  x  [  A  ] (8 x 768)  --> TRAINABLE (12,288 parameters)
 ```
 
-### Comparativo de Peso & Parâmetros
+### Efficiency Comparison
 
-| Métrica | Fine-Tuning Completo | Com LoRA (r=8) | Redução |
+| Metric | Full Fine-Tuning | LoRA (Rank = 8) | Savings |
 | :--- | :--- | :--- | :--- |
-| **Parâmetros Treináveis** | 110.000.000 | ~295.000 | **-99.73%** |
-| **Tamanho do Arquivo Salvo** | ~440 MB | **~1.16 MB** | **-99.74%** |
-| **Tempo de Treinamento** | Horas / GPUs caras | Minutos / GPU grátis ou CPU | **~10x mais rápido** |
-| **Latência de Inferência** | 0 ms extra | **0 ms extra** (após fusão/merge) | Sem perda |
+| **Trainable Parameters** | 110,000,000 | ~295,000 | **-99.73%** |
+| **Checkpoint Storage** | ~440 MB | **~1.16 MB** | **-99.74%** |
+| **Training Speed** | Hours | Minutes | **~10x faster** |
+| **Inference Overhead** | Baseline | **0 ms** (via weight merge) | No penalty |
 
 ---
 
-## 📂 Estrutura do Projeto
+## 📂 Repository Structure
 
-```
-bertimbau-lora-helpdesk/
-├── README.md                          # Este documento
-├── requirements.txt                   # Dependências do projeto
-├── .gitignore                         # Arquivos ignorados pelo Git
+```text
+bert-lora-helpdesk/
+├── README.md                          # Project documentation
+├── requirements.txt                   # Environment dependencies
+├── .gitignore                         # Standard git ignore rules
 ├── data/
-│   └── helpdesk_dataset.json          # Dataset com frases de TI em português
+│   └── helpdesk_dataset.json          # IT support ticket dataset (English)
 ├── notebooks/
-│   └── treinamento_lora_colab.ipynb   # Notebook pronto para executar no Google Colab
+│   └── lora_training_colab.ipynb      # Google Colab training & test notebook
 └── src/
     ├── __init__.py
-    ├── lora_scratch.py                # Implementação pura da matemática do LoRA em PyTorch
-    ├── train.py                       # Script completo de treino usando Hugging Face PEFT
-    └── inference.py                   # Chatbot interativo no terminal
+    ├── lora_scratch.py                # Pure PyTorch implementation of LoRA layer & merge
+    ├── train.py                       # Hugging Face Trainer + PEFT pipeline
+    └── inference.py                   # Real-time CLI interactive chatbot
 ```
 
 ---
 
-## 🛠️ Como Executar
+## 🚀 Quick Start
 
-### Opção 1: No Google Colab (1-Clique)
-Abra a pasta `notebooks/` e envie o arquivo `treinamento_lora_colab.ipynb` para o [Google Colab](https://colab.research.google.com). O notebook já contém a instalação das dependências, preparação dos dados, treino e o teste de chat interativo.
+### 1. Run in Google Colab (One-Click)
+Open `notebooks/lora_training_colab.ipynb` directly in [Google Colab](https://colab.research.google.com/) to train on free GPU/CPU in under two minutes.
 
-### Opção 2: Localmente na sua Máquina
+### 2. Local Execution
 
-1. **Clone o repositório e crie o ambiente:**
+Clone the repository and set up a virtual environment:
+
 ```bash
-git clone https://github.com/SEU-USUARIO/bertimbau-lora-helpdesk.git
-cd bertimbau-lora-helpdesk
+git clone https://github.com/YOUR-USERNAME/bert-lora-helpdesk.git
+cd bert-lora-helpdesk
 
 python -m venv venv
-# No Windows:
+# Windows:
 venv\Scripts\activate
-# No Linux/Mac:
+# Linux / macOS:
 source venv/bin/activate
 
 pip install -r requirements.txt
 ```
 
-2. **Entenda o LoRA do Zero (PyTorch puro):**
-Execute o script didático que demonstra a decomposição tensorial e o merge de matrizes sem nenhuma dependência além do PyTorch:
+**Step A: Inspect LoRA from Scratch (Pure PyTorch)**
 ```bash
 python src/lora_scratch.py
 ```
+*Outputs matrix decomposition, parameter reductions, and demonstrates zero-latency parameter merging.*
 
-3. **Treine o Adaptador LoRA:**
+**Step B: Fine-Tune the Adapter**
 ```bash
-python src/train.py --epochs 5 --batch_size 8 --rank 8 --alpha 16
+python src/train.py --base_model bert-base-uncased --epochs 5 --rank 8
 ```
-Ao final do treinamento, o terminal exibirá o tamanho exato do arquivo gerado em disco (`adapter_model.safetensors` com ~1.2 MB).
+*Saves the adapter checkpoint to `checkpoints/bert-lora-helpdesk/adapter_model.safetensors` (~1.16 MB).*
 
-4. **Inicie o Chatbot Interativo de Testes:**
+**Step C: Interactive CLI Chatbot**
 ```bash
-python src/inference.py --adapter_path checkpoints/bertimbau-lora-helpdesk
+python src/inference.py --adapter_path checkpoints/bert-lora-helpdesk
 ```
 
 ---
 
-## 🌐 Como Publicar no Hugging Face Hub
+## 🌐 Publishing to Hugging Face Hub
 
-Para disponibilizar seu adaptador LoRA publicamente (como no modelo original):
+To publish your trained adapter under your Hugging Face username:
 
-1. Faça login no Hugging Face CLI:
 ```bash
 pip install huggingface_hub
 huggingface-cli login
 ```
 
-2. No Python:
+In Python:
 ```python
-from peft import PeftModel
-from transformers import AutoTokenizer
-
-model.push_to_hub("seu-usuario/bertimbau-lora-helpdesk")
-tokenizer.push_to_hub("seu-usuario/bertimbau-lora-helpdesk")
+model.push_to_hub("YOUR-USERNAME/bert-lora-helpdesk")
+tokenizer.push_to_hub("YOUR-USERNAME/bert-lora-helpdesk")
 ```
 
 ---
 
-## 📜 Licença
+## 📄 License
 
-Distribuído sob a licença MIT. Veja `LICENSE` para mais informações.
+This project is licensed under the MIT License - see the `LICENSE` file for details.

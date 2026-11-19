@@ -1,8 +1,8 @@
 """
 inference.py
 ============
-Script interativo para testar o modelo BERTimbau adaptado com LoRA
-em chamados de Helpdesk e Suporte de TI em Português.
+Interactive CLI tool to test the LoRA-adapted BERT model
+on enterprise IT Helpdesk ticket intent classification in English.
 """
 
 import os
@@ -12,37 +12,37 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from peft import PeftModel
 
 LABELS = [
-    "RESET_SENHA",
-    "PROBLEMA_ACESSO",
-    "FALHA_HARDWARE",
-    "INSTALACAO_SOFTWARE",
-    "LENTIDAO_REDE",
-    "DUVIDA_GERAL"
+    "PASSWORD_RESET",
+    "ACCESS_ISSUE",
+    "HARDWARE_FAILURE",
+    "SOFTWARE_INSTALL",
+    "NETWORK_LATENCY",
+    "GENERAL_QUERY"
 ]
 
 LABEL_DESCRIPTIONS = {
-    "RESET_SENHA": "🔑 Redefinição / Desbloqueio de Senha",
-    "PROBLEMA_ACESSO": "🔒 Permissão / Acesso a Pastas / VPN",
-    "FALHA_HARDWARE": "🖥️ Falha Física / Monitor / Teclado / Cabo",
-    "INSTALACAO_SOFTWARE": "📦 Instalação ou Licença de Programas",
-    "LENTIDAO_REDE": "🌐 Conexão / Wi-Fi / Queda ou Latência de Rede",
-    "DUVIDA_GERAL": "❓ Dúvidas Gerais e Políticas da Empresa"
+    "PASSWORD_RESET": "🔑 Password Reset / Credential Unlock",
+    "ACCESS_ISSUE": "🔒 Permission / Shared Folder Access / VPN",
+    "HARDWARE_FAILURE": "🖥️ Physical Hardware / Monitor / Keyboard / Cables",
+    "SOFTWARE_INSTALL": "📦 Software Installation & License Provisioning",
+    "NETWORK_LATENCY": "🌐 Network Connectivity / Wi-Fi / Packet Loss",
+    "GENERAL_QUERY": "❓ General Inquiries & Corporate IT Policies"
 }
 
 
-def load_model(adapter_path: str, base_model_id: str = "neuralmind/bert-base-portuguese-cased"):
+def load_model(adapter_path: str, base_model_id: str = "bert-base-uncased"):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"🔧 Carregando tokenizador e modelo no dispositivo: {device}...")
+    print(f"🔧 Loading model and tokenizer on device: {device}...")
 
     tokenizer = AutoTokenizer.from_pretrained(adapter_path if os.path.exists(adapter_path) else base_model_id)
 
-    # Carrega a base congelada de 110M parâmetros
+    # Load frozen 110M base model
     base_model = AutoModelForSequenceClassification.from_pretrained(
         base_model_id,
         num_labels=len(LABELS)
     ).to(device)
 
-    # Acopla o adaptador LoRA de ~1.2 MB
+    # Attach ~1.2 MB LoRA adapter
     model = PeftModel.from_pretrained(base_model, adapter_path).to(device)
     model.eval()
 
@@ -63,49 +63,49 @@ def predict_intent(text: str, model, tokenizer, device):
 
 def interactive_chat(model, tokenizer, device):
     print("\n" + "=" * 65)
-    print("🤖 HELPDESK AI (BERTimbau + LoRA 1.2 MB)")
-    print("Digite a descrição do seu problema ou 'sair' para encerrar.")
+    print("🤖 IT HELPDESK AI (BERT-Base + LoRA 1.2 MB)")
+    print("Enter ticket issue description or type 'exit' to quit.")
     print("=" * 65)
 
     while True:
         try:
-            user_input = input("\n👤 Usuário: ").strip()
+            user_input = input("\n👤 User: ").strip()
             if not user_input:
                 continue
-            if user_input.lower() in ["sair", "exit", "quit"]:
-                print("👋 Encerrando. Até logo!")
+            if user_input.lower() in ["exit", "quit", "q"]:
+                print("👋 Goodbye!")
                 break
 
             intent, conf, all_probs = predict_intent(user_input, model, tokenizer, device)
             desc = LABEL_DESCRIPTIONS.get(intent, intent)
 
-            print(f"🎯 Intenção Identificada: {intent} ({conf:.2f}%)")
-            print(f"📌 Categoria: {desc}")
+            print(f"🎯 Identified Intent: {intent} ({conf:.2f}%)")
+            print(f"📌 Category: {desc}")
 
-            # Top-2 probabilidades
+            # Top-2 alternatives
             top_probs, top_indices = torch.topk(all_probs, k=min(2, len(LABELS)))
-            if top_probs[1].item() > 0.15: # se houver segunda classe relevante
+            if top_probs[1].item() > 0.15:
                 alt_intent = LABELS[top_indices[1].item()]
-                print(f"   (Segunda opção mais provável: {alt_intent} com {top_probs[1].item()*100:.1f}%)")
+                print(f"   (Secondary probable category: {alt_intent} with {top_probs[1].item()*100:.1f}%)")
 
         except KeyboardInterrupt:
-            print("\n👋 Encerrando sessão.")
+            print("\n👋 Session closed.")
             break
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Inferência com BERTimbau LoRA Helpdesk")
+    parser = argparse.ArgumentParser(description="Inference with BERT LoRA Helpdesk")
     parser.add_argument(
         "--adapter_path",
         type=str,
-        default="checkpoints/bertimbau-lora-helpdesk",
-        help="Caminho local da pasta do LoRA ou repo ID do Hugging Face"
+        default="checkpoints/bert-lora-helpdesk",
+        help="Local path to LoRA checkpoint or Hugging Face Hub repo ID"
     )
     parser.add_argument(
         "--base_model",
         type=str,
-        default="neuralmind/bert-base-portuguese-cased",
-        help="Modelo base de 110M"
+        default="bert-base-uncased",
+        help="Base 110M model identifier"
     )
     args = parser.parse_args()
 

@@ -1,8 +1,8 @@
 """
 train.py
 ========
-Pipeline de Treinamento com LoRA (PEFT) sobre o BERTimbau Base (110M parâmetros)
-para Classificação de Chamados de Helpdesk de TI em Português.
+Fine-Tuning pipeline with LoRA (PEFT) on BERT-Base (110M parameters)
+for IT Helpdesk ticket intent classification in English.
 """
 
 import os
@@ -25,14 +25,14 @@ from peft import (
 )
 import evaluate
 
-# Mapeamento oficial de labels do nosso projeto Helpdesk
+# Official classification labels
 LABELS = [
-    "RESET_SENHA",
-    "PROBLEMA_ACESSO",
-    "FALHA_HARDWARE",
-    "INSTALACAO_SOFTWARE",
-    "LENTIDAO_REDE",
-    "DUVIDA_GERAL"
+    "PASSWORD_RESET",
+    "ACCESS_ISSUE",
+    "HARDWARE_FAILURE",
+    "SOFTWARE_INSTALL",
+    "NETWORK_LATENCY",
+    "GENERAL_QUERY"
 ]
 
 LABEL2ID = {lbl: i for i, lbl in enumerate(LABELS)}
@@ -47,10 +47,10 @@ def compute_metrics(eval_pred):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Treinamento LoRA do BERTimbau para Helpdesk")
-    parser.add_argument("--base_model", type=str, default="neuralmind/bert-base-portuguese-cased")
+    parser = argparse.ArgumentParser(description="LoRA Fine-Tuning on BERT for IT Helpdesk")
+    parser.add_argument("--base_model", type=str, default="bert-base-uncased")
     parser.add_argument("--data_path", type=str, default="data/helpdesk_dataset.json")
-    parser.add_argument("--output_dir", type=str, default="checkpoints/bertimbau-lora-helpdesk")
+    parser.add_argument("--output_dir", type=str, default="checkpoints/bert-lora-helpdesk")
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--lr", type=float, default=2e-4)
@@ -59,14 +59,13 @@ def main():
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"🚀 Dispositivo em uso: {device}")
+    print(f"🚀 Active device: {device}")
 
-    # 1. Carregar dataset
-    print(f"\n📂 Carregando dados de: {args.data_path}")
+    # 1. Load dataset
+    print(f"\n📂 Loading dataset from: {args.data_path}")
     with open(args.data_path, "r", encoding="utf-8") as f:
         raw_data = json.load(f)
 
-    # Dividir em Treino (85%) e Teste (15%)
     texts = [item["text"] for item in raw_data]
     labels = [LABEL2ID[item["label"]] for item in raw_data]
 
@@ -74,10 +73,10 @@ def main():
     split_dataset = dataset.train_test_split(test_size=0.15, seed=42)
     train_ds = split_dataset["train"]
     eval_ds = split_dataset["test"]
-    print(f"   Exemplos de treino: {len(train_ds)} | Exemplos de validação: {len(eval_ds)}")
+    print(f"   Train samples: {len(train_ds)} | Eval samples: {len(eval_ds)}")
 
-    # 2. Carregar Tokenizador
-    print(f"\n🔤 Carregando tokenizador: {args.base_model}")
+    # 2. Load Tokenizer
+    print(f"\n🔤 Loading tokenizer: {args.base_model}")
     tokenizer = AutoTokenizer.from_pretrained(args.base_model)
 
     def tokenize_func(batch):
@@ -86,8 +85,8 @@ def main():
     train_tokenized = train_ds.map(tokenize_func, batched=True)
     eval_tokenized = eval_ds.map(tokenize_func, batched=True)
 
-    # 3. Carregar Modelo Base
-    print(f"\n🧠 Carregando Modelo Base ({args.base_model} - ~110M parâmetros)...")
+    # 3. Load 110M Base Model
+    print(f"\n🧠 Loading base model ({args.base_model} - ~110M parameters)...")
     base_model = AutoModelForSequenceClassification.from_pretrained(
         args.base_model,
         num_labels=len(LABELS),
@@ -95,24 +94,23 @@ def main():
         label2id=LABEL2ID
     )
 
-    # 4. Configurar LoRA (PEFT)
-    # Alvos: Projeções de query e value da camada de atenção auto-supervisionada
+    # 4. Configure LoRA (PEFT)
     lora_config = LoraConfig(
         task_type=TaskType.SEQ_CLS,
         r=args.rank,
         lora_alpha=args.alpha,
         lora_dropout=0.1,
         target_modules=["query", "value"],
-        modules_to_save=["classifier"] # Treina também a cabeça classificadora de 6 classes
+        modules_to_save=["classifier"]
     )
 
     model = get_peft_model(base_model, lora_config)
     print("\n" + "=" * 60)
-    print("ESTATÍSTICAS DE PARÂMETROS DO LoRA:")
+    print("LoRA PARAMETER BREAKDOWN:")
     model.print_trainable_parameters()
     print("=" * 60)
 
-    # 5. Argumentos de Treinamento
+    # 5. Training Arguments
     training_args = TrainingArguments(
         output_dir=args.output_dir,
         num_train_epochs=args.epochs,
@@ -138,25 +136,25 @@ def main():
         compute_metrics=compute_metrics
     )
 
-    # 6. Treinar
-    print("\n🔥 Iniciando treinamento do LoRA...")
+    # 6. Train
+    print("\n🔥 Starting LoRA fine-tuning...")
     trainer.train()
 
-    # 7. Salvar apenas o Adaptador LoRA e o Tokenizador
-    print(f"\n💾 Salvando adaptador LoRA em: {args.output_dir}")
+    # 7. Save Adapter & Tokenizer
+    print(f"\n💾 Saving LoRA adapter checkpoint to: {args.output_dir}")
     model.save_pretrained(args.output_dir)
     tokenizer.save_pretrained(args.output_dir)
 
-    # 8. Medir o tamanho do arquivo final no disco!
+    # 8. Measure output adapter size on disk
     adapter_file = os.path.join(args.output_dir, "adapter_model.safetensors")
     if os.path.exists(adapter_file):
         file_size_bytes = os.path.getsize(adapter_file)
         file_size_mb = file_size_bytes / (1024 * 1024)
         print("=" * 60)
-        print(f"🎉 SUCESSO! TAMANHO DO ADAPTADOR LoRA GERADO:")
-        print(f"📦 Arquivo: {adapter_file}")
-        print(f"⚖️ Tamanho: {file_size_mb:.2f} MB ({file_size_bytes:,} bytes)")
-        print(f"🎯 Enquanto o modelo original pesaria ~440 MB, seu LoRA tem ~{file_size_mb:.2f} MB!")
+        print("🎉 SUCCESS! LoRA ADAPTER GENERATED:")
+        print(f"📦 File: {adapter_file}")
+        print(f"⚖️ Size: {file_size_mb:.2f} MB ({file_size_bytes:,} bytes)")
+        print(f"🎯 Full model weighs ~440 MB, while LoRA adapter weighs ~{file_size_mb:.2f} MB!")
         print("=" * 60)
 
 
