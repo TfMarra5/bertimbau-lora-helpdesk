@@ -1,26 +1,33 @@
 # How 1.2 MB Fine-Tunes a 110M Parameter AI: LoRA from Scratch
 
-[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-EE4C2C.svg?logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![Hugging Face PEFT](https://img.shields.io/badge/PEFT-0.9+-yellow.svg)](https://github.com/huggingface/peft)
-[![Model](https://img.shields.io/badge/BERT--Base-110M_Params-green.svg)](https://huggingface.co/bert-base-uncased)
-[![Adapter Size](https://img.shields.io/badge/Adapter_Size-1.16_MB-brightgreen.svg)]()
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+<p align="center">
+  <a href="https://colab.research.google.com/github/TfMarra5/bertimbau-lora-helpdesk/blob/main/notebooks/lora_training_colab.ipynb">
+    <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab" />
+  </a>
+  <a href="https://github.com/TfMarra5/bertimbau-lora-helpdesk/actions/workflows/ci.yml">
+    <img src="https://github.com/TfMarra5/bertimbau-lora-helpdesk/actions/workflows/ci.yml/badge.svg" alt="CI Status" />
+  </a>
+  <img src="https://img.shields.io/badge/Python-3.9+-blue.svg" alt="Python 3.9+" />
+  <img src="https://img.shields.io/badge/PyTorch-2.0+-EE4C2C.svg?logo=pytorch&logoColor=white" alt="PyTorch 2.0+" />
+  <img src="https://img.shields.io/badge/BERT--Base-110M_Params-green.svg" alt="BERT Base" />
+  <img src="https://img.shields.io/badge/Adapter_Size-1.16_MB-brightgreen.svg" alt="Adapter Size" />
+  <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License" />
+</p>
 
-An educational and production-ready repository demonstrating how **Low-Rank Adaptation (LoRA)** fine-tunes a **110 million parameter** Transformer (`bert-base-uncased`) using an adapter checkpoint of **only ~1.2 MB** while preserving near-perfect task accuracy.
+An educational and production-grade implementation demonstrating how **Low-Rank Adaptation (LoRA)** fine-tunes a **110 million parameter** Transformer (`bert-base-uncased`) using an adapter checkpoint of **only ~1.2 MB** with zero added inference latency after weight merging.
 
 ---
 
 ## 📌 Project Overview & Use Case
 
-We train a specialized intent classification engine for enterprise **IT Helpdesk & Support Tickets**:
+We train a specialized intent classification and automated routing engine for enterprise **IT Helpdesk Tickets**:
 
-1. `PASSWORD_RESET` — Expired passwords, account lockout, credential renewal.
-2. `ACCESS_ISSUE` — VPN authentication, shared network drive permissions, 403 errors.
-3. `HARDWARE_FAILURE` — Monitor blackouts, laptop boot failures, stuck peripherals.
-4. `SOFTWARE_INSTALL` — Deployment requests for VS Code, Docker, Office suites.
-5. `NETWORK_LATENCY` — Wi-Fi drops, high ping latency, video conference jitter.
-6. `GENERAL_QUERY` — IT policies, equipment return procedures, support SLAs.
+* 🔑 `PASSWORD_RESET` — Expired passwords, account lockout, credential renewal.
+* 🔒 `ACCESS_ISSUE` — VPN authentication, shared network drive permissions, 403 errors.
+* 🖥️ `HARDWARE_FAILURE` — Monitor blackouts, laptop boot failures, stuck peripherals.
+* 📦 `SOFTWARE_INSTALL` — Deployment requests for VS Code, Docker, Office suites.
+* 🌐 `NETWORK_LATENCY` — Wi-Fi drops, high ping latency, video conference jitter.
+* ❓ `GENERAL_QUERY` — IT policies, equipment return procedures, support SLAs.
 
 ---
 
@@ -38,20 +45,39 @@ Where:
 * $B \in \mathbb{R}^{d_{out} \times r}$: initialized strictly to **zero** (ensuring $\Delta W = 0$ at training onset).
 * $r \ll \min(d_{in}, d_{out})$ (e.g., $r = 8$).
 
-```
+```text
            [     W_0     ]  (768 x 768)  --> FROZEN (requires_grad = False)
                   +
      [  B  ] (768 x 8)  x  [  A  ] (8 x 768)  --> TRAINABLE (12,288 parameters)
 ```
 
-### Efficiency Comparison
+---
 
-| Metric | Full Fine-Tuning | LoRA (Rank = 8) | Savings |
+## 📊 Empirical Benchmarks
+
+Measured over 2,000 iterations comparing Base Linear vs LoRA vs Merged LoRA:
+
+| Metric | Full Model | LoRA (Rank = 8) | Delta (%) |
 | :--- | :--- | :--- | :--- |
-| **Trainable Parameters** | 110,000,000 | ~295,000 | **-99.73%** |
-| **Checkpoint Storage** | ~440 MB | **~1.16 MB** | **-99.74%** |
-| **Training Speed** | Hours | Minutes | **~10x faster** |
-| **Inference Overhead** | Baseline | **0 ms** (via weight merge) | No penalty |
+| **Trainable Parameters** | 110,000,000 | 299,520 | **-99.73%** |
+| **Disk Footprint (FP32)** | 419.62 MB | **1.14 MB** | **-99.73%** |
+| **Layer Latency (Base)** | 3.14 ms | — | Baseline |
+| **Layer Latency (LoRA Active)** | — | 4.59 ms | +46.1% (during training) |
+| **Layer Latency (LoRA Merged)** | — | **3.14 ms** | **0.0% (Zero latency overhead!)** |
+
+### Rank ($r$) Scaling Study
+
+How checkpoint storage scales linearly with the chosen rank $r$:
+
+```text
+r=1  : 0.16 MB
+r=2  : 0.30 MB
+r=4  : 0.58 MB
+r=8  : 1.14 MB  <-- Optimal sweet spot for classification
+r=16 : 2.27 MB
+r=32 : 4.52 MB
+r=64 : 9.02 MB
+```
 
 ---
 
@@ -59,18 +85,23 @@ Where:
 
 ```text
 bert-lora-helpdesk/
-├── README.md                          # Project documentation
-├── requirements.txt                   # Environment dependencies
-├── .gitignore                         # Standard git ignore rules
+├── .github/workflows/ci.yml           # Automated unit test CI pipeline
 ├── data/
 │   └── helpdesk_dataset.json          # IT support ticket dataset (English)
 ├── notebooks/
-│   └── lora_training_colab.ipynb      # Google Colab training & test notebook
-└── src/
-    ├── __init__.py
-    ├── lora_scratch.py                # Pure PyTorch implementation of LoRA layer & merge
-    ├── train.py                       # Hugging Face Trainer + PEFT pipeline
-    └── inference.py                   # Real-time CLI interactive chatbot
+│   └── lora_training_colab.ipynb      # One-click Google Colab notebook
+├── src/
+│   ├── __init__.py
+│   ├── app.py                         # Interactive Gradio web dashboard
+│   ├── benchmark.py                   # Empirical latency and memory benchmarking suite
+│   ├── inference.py                   # Real-time CLI interactive chatbot
+│   ├── lora_scratch.py                # Pure PyTorch implementation of LoRA layer & merge
+│   ├── rank_ablation.py               # Rank ablation and parameter study
+│   └── train.py                       # Hugging Face Trainer + PEFT fine-tuning pipeline
+├── tests/
+│   └── test_lora.py                   # Unit tests validating tensor math & weight merge
+├── pyproject.toml                     # Modern package configuration
+└── requirements.txt                   # Environment dependencies
 ```
 
 ---
@@ -78,15 +109,13 @@ bert-lora-helpdesk/
 ## 🚀 Quick Start
 
 ### 1. Run in Google Colab (One-Click)
-Open `notebooks/lora_training_colab.ipynb` directly in [Google Colab](https://colab.research.google.com/) to train on free GPU/CPU in under two minutes.
+Click the badge above or open `notebooks/lora_training_colab.ipynb` directly in [Google Colab](https://colab.research.google.com/github/TfMarra5/bertimbau-lora-helpdesk/blob/main/notebooks/lora_training_colab.ipynb).
 
-### 2. Local Execution
-
-Clone the repository and set up a virtual environment:
+### 2. Local Installation
 
 ```bash
-git clone https://github.com/YOUR-USERNAME/bert-lora-helpdesk.git
-cd bert-lora-helpdesk
+git clone https://github.com/TfMarra5/bertimbau-lora-helpdesk.git
+cd bertimbau-lora-helpdesk
 
 python -m venv venv
 # Windows:
@@ -94,45 +123,43 @@ venv\Scripts\activate
 # Linux / macOS:
 source venv/bin/activate
 
-pip install -r requirements.txt
+pip install -e .
 ```
 
-**Step A: Inspect LoRA from Scratch (Pure PyTorch)**
-```bash
-python src/lora_scratch.py
-```
-*Outputs matrix decomposition, parameter reductions, and demonstrates zero-latency parameter merging.*
+### 3. Key Commands
 
-**Step B: Fine-Tune the Adapter**
-```bash
-python src/train.py --base_model bert-base-uncased --epochs 5 --rank 8
-```
-*Saves the adapter checkpoint to `checkpoints/bert-lora-helpdesk/adapter_model.safetensors` (~1.16 MB).*
+* **Run Unit Tests:**
+  ```bash
+  pytest tests/
+  ```
 
-**Step C: Interactive CLI Chatbot**
-```bash
-python src/inference.py --adapter_path checkpoints/bert-lora-helpdesk
-```
+* **Inspect LoRA Math from Scratch (Pure PyTorch):**
+  ```bash
+  python src/lora_scratch.py
+  ```
 
----
+* **Run Latency & Parameter Benchmark:**
+  ```bash
+  python src/benchmark.py
+  ```
 
-## 🌐 Publishing to Hugging Face Hub
+* **Run Rank ($r$) Ablation Study:**
+  ```bash
+  python src/rank_ablation.py
+  ```
 
-To publish your trained adapter under your Hugging Face username:
+* **Launch Interactive Gradio Web Dashboard:**
+  ```bash
+  python src/app.py
+  ```
 
-```bash
-pip install huggingface_hub
-huggingface-cli login
-```
-
-In Python:
-```python
-model.push_to_hub("YOUR-USERNAME/bert-lora-helpdesk")
-tokenizer.push_to_hub("YOUR-USERNAME/bert-lora-helpdesk")
-```
+* **Train the Model:**
+  ```bash
+  python src/train.py --base_model bert-base-uncased --epochs 5 --rank 8
+  ```
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the `LICENSE` file for details.
+Distributed under the MIT License. See `LICENSE` for details.
