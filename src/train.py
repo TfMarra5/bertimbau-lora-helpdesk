@@ -126,15 +126,18 @@ def main():
         report_to="none"
     )
 
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_tokenized,
-        eval_dataset=eval_tokenized,
-        tokenizer=tokenizer,
-        data_collator=DataCollatorWithPadding(tokenizer=tokenizer),
-        compute_metrics=compute_metrics
-    )
+    trainer_kwargs = {
+        "model": model,
+        "args": training_args,
+        "train_dataset": train_tokenized,
+        "eval_dataset": eval_tokenized,
+        "data_collator": DataCollatorWithPadding(tokenizer=tokenizer),
+        "compute_metrics": compute_metrics
+    }
+    try:
+        trainer = Trainer(processing_class=tokenizer, **trainer_kwargs)
+    except TypeError:
+        trainer = Trainer(tokenizer=tokenizer, **trainer_kwargs)
 
     # 6. Train
     print("\n🔥 Starting LoRA fine-tuning...")
