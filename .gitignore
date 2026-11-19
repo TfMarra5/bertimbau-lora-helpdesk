@@ -25,6 +25,8 @@ base_model/
 *.bin
 *.pt
 
-# Ignorar arquivos temporários do OS
+# OS files
 .DS_Store
 Thumbs.db
+desktop.ini
+
