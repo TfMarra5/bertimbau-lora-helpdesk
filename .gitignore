@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Caches e Checkpoints
+checkpoints/
+output/
+runs/
+.cache/
+wandb/
+
+# Ambientes virtuais
+venv/
+.env/
+env/
+ENV/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Modelos pesados baixados
+base_model/
+*.safetensors
+*.bin
+*.pt
+
+# Ignorar arquivos temporários do OS
+.DS_Store
+Thumbs.db
