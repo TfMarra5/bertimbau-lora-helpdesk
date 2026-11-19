@@ -55,6 +55,10 @@ Where:
 
 ## 📊 Empirical Benchmarks
 
+<p align="center">
+  <img src="assets/benchmark_summary.png" alt="LoRA vs Full Fine-Tuning Benchmark" width="100%" />
+</p>
+
 Measured over 2,000 iterations comparing Base Linear vs LoRA vs Merged LoRA:
 
 | Metric | Full Model | LoRA (Rank = 8) | Delta (%) |
