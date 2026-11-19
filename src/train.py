@@ -53,7 +53,7 @@ def main():
     parser.add_argument("--output_dir", type=str, default="checkpoints/bert-lora-helpdesk")
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--batch_size", type=int, default=8)
-    parser.add_argument("--lr", type=float, default=5e-4)
+    parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--rank", type=int, default=8)
     parser.add_argument("--alpha", type=int, default=16)
     args = parser.parse_args()
@@ -117,8 +117,6 @@ def main():
         per_device_train_batch_size=args.batch_size,
         per_device_eval_batch_size=args.batch_size,
         learning_rate=args.lr,
-        warmup_ratio=0.1,
-        weight_decay=0.01,
         eval_strategy="epoch",
         save_strategy="epoch",
         logging_steps=5,
