@@ -72,6 +72,7 @@ def classify_ticket(ticket_text: str):
 
     text_lower = ticket_text.lower()
 
+    prediction_source = "BERT + LoRA"
     # Model inference if checkpoints exist, otherwise rule-based confidence simulator
     adapter_path = "checkpoints/bert-lora-helpdesk"
     use_model = os.path.exists(adapter_path)
@@ -93,21 +94,41 @@ def classify_ticket(ticket_text: str):
                 probs = torch.softmax(model(**inputs).logits, dim=-1).squeeze().tolist()
 
             scores = {LABELS[i]: float(probs[i]) for i in range(len(LABELS))}
-        except Exception:
+        except Exception as error:
+            print(f"[WARNING] Model inference failed: {error}")
             scores = simulate_scores(text_lower)
+            prediction_source = "DEMO MODE (rule-based)"
     else:
         scores = simulate_scores(text_lower)
+        prediction_source = "DEMO MODE (rule-based)"
 
     best_label = max(scores, key=scores.get)
     best_score = scores[best_label] * 100.0
 
     route = ROUTING_INFO.get(best_label, {})
     routing_html = f"""
-    <div style="padding: 16px; border-radius: 8px; border: 1px solid #e0e0e0; background-color: #f9fafb;">
-        <h3 style="margin-top: 0; color: #1e3a8a;">{route.get('icon', '')} Intent: {best_label} ({best_score:.1f}% Confidence)</h3>
-        <p><strong>🏢 Automated Routing Target:</strong> {route.get('team', 'Unassigned')}</p>
-        <p><strong>⏱️ Target Resolution SLA:</strong> {route.get('sla', 'Standard')}</p>
-        <p><strong>⚡ Action Plan:</strong> {route.get('action', 'Manual review')}</p>
+    <div style="padding: 16px; border-radius: 8px; border: 1px solid #e0e0e0; background-color: #f9fafb; color: #1f2937;">
+
+        <p style="color: #1f2937; margin-top: 0;">
+            <strong style="color: #1f2937 !important;">Prediction Source:</strong> {prediction_source}
+        </p>
+
+        <h3 style="margin-top: 0; color: #1e3a8a;">
+            {route.get('icon', '')} Intent: {best_label} ({best_score:.1f}% Score)
+        </h3>
+
+        <p style="color: #1f2937;">
+            <strong style="color: #1f2937 !important;">🏢 Automated Routing Target:</strong> {route.get('team', 'Unassigned')}
+        </p>
+
+        <p style="color: #1f2937;">
+            <strong style="color: #1f2937 !important;">⏱️ Target Resolution SLA:</strong> {route.get('sla', 'Standard')}
+        </p>
+
+        <p style="color: #1f2937;">
+            <strong style="color: #1f2937 !important;">⚡ Action Plan:</strong> {route.get('action', 'Manual review')}
+        </p>
+
     </div>
     """
 
@@ -170,7 +191,7 @@ def build_app():
                 )
 
             with gr.Column(scale=2):
-                label_output = gr.Label(num_top_classes=3, label="Confidence Breakdown")
+                label_output = gr.Label(num_top_classes=3, label="Classification Scores")
                 routing_output = gr.HTML(label="Automated Dispatch Details")
 
         submit_btn.click(
