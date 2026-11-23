@@ -16,7 +16,8 @@ from transformers import (
     AutoModelForSequenceClassification,
     TrainingArguments,
     Trainer,
-    DataCollatorWithPadding
+    DataCollatorWithPadding,
+    set_seed
 )
 from peft import (
     LoraConfig,
@@ -73,6 +74,8 @@ def main():
     parser.add_argument("--rank", type=int, default=8)
     parser.add_argument("--alpha", type=int, default=16)
     args = parser.parse_args()
+    # Reproducibility
+    set_seed(42)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"🚀 Active device: {device}")
