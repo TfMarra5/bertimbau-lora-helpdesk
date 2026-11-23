@@ -23,7 +23,8 @@ from peft import (
     TaskType,
     get_peft_model
 )
-import evaluate
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+from sklearn.model_selection import train_test_split
 
 # Official classification labels
 LABELS = [
@@ -40,10 +41,25 @@ ID2LABEL = {i: lbl for i, lbl in enumerate(LABELS)}
 
 
 def compute_metrics(eval_pred):
-    metric = evaluate.load("accuracy")
     logits, labels = eval_pred
     predictions = np.argmax(logits, axis=-1)
-    return metric.compute(predictions=predictions, references=labels)
+
+    accuracy = accuracy_score(labels, predictions)
+
+    precision, recall, f1, _ = precision_recall_fscore_support(
+        labels,
+        predictions,
+        labels=list(range(len(LABELS))),
+        average="macro",
+        zero_division=0
+    )
+
+    return {
+        "accuracy": float(accuracy),
+        "precision_macro": float(precision),
+        "recall_macro": float(recall),
+        "f1_macro": float(f1)
+    }
 
 
 def main():
@@ -70,10 +86,32 @@ def main():
     labels = [LABEL2ID[item["label"]] for item in raw_data]
 
     dataset = Dataset.from_dict({"text": texts, "label": labels})
-    split_dataset = dataset.train_test_split(test_size=0.15, seed=42)
-    train_ds = split_dataset["train"]
-    eval_ds = split_dataset["test"]
-    print(f"   Train samples: {len(train_ds)} | Eval samples: {len(eval_ds)}")
+
+    # Split 70% train / 30% holdout
+    train_indices, holdout_indices = train_test_split(
+        np.arange(len(dataset)),
+        test_size=0.30,
+        random_state=42,
+        stratify=labels
+    )
+
+    # Split holdout into validation and test sets
+    val_indices, test_indices = train_test_split(
+        holdout_indices,
+        test_size=0.50,
+        random_state=42,
+        stratify=[labels[i] for i in holdout_indices]
+    )
+
+    train_ds = dataset.select(train_indices.tolist())
+    eval_ds = dataset.select(val_indices.tolist())
+    test_ds = dataset.select(test_indices.tolist())
+
+    print(
+        f"   Train: {len(train_ds)} | "
+        f"Validation: {len(eval_ds)} | "
+        f"Test: {len(test_ds)}"
+    )
 
     # 2. Load Tokenizer
     print(f"\n🔤 Loading tokenizer: {args.base_model}")
@@ -84,6 +122,7 @@ def main():
 
     train_tokenized = train_ds.map(tokenize_func, batched=True)
     eval_tokenized = eval_ds.map(tokenize_func, batched=True)
+    test_tokenized = test_ds.map(tokenize_func, batched=True)
 
     # 3. Load 110M Base Model
     print(f"\n🧠 Loading base model ({args.base_model} - ~110M parameters)...")
@@ -121,7 +160,7 @@ def main():
         save_strategy="epoch",
         logging_steps=5,
         load_best_model_at_end=True,
-        metric_for_best_model="accuracy",
+        metric_for_best_model="f1_macro",
         save_total_limit=1,
         report_to="none"
     )
@@ -143,12 +182,31 @@ def main():
     print("\n🔥 Starting LoRA fine-tuning...")
     trainer.train()
 
-    # 7. Save Adapter & Tokenizer
+    # 7. Final evaluation on unseen test data
+    print("\n🧪 Evaluating on held-out test data...")
+
+    test_metrics = trainer.evaluate(
+        eval_dataset=test_tokenized,
+        metric_key_prefix="test"
+    )
+
+    print("\n" + "=" * 60)
+    print("FINAL TEST RESULTS")
+    print("=" * 60)
+
+    print(f"Accuracy:        {test_metrics['test_accuracy']:.4f}")
+    print(f"Precision Macro: {test_metrics['test_precision_macro']:.4f}")
+    print(f"Recall Macro:    {test_metrics['test_recall_macro']:.4f}")
+    print(f"F1-Score Macro:  {test_metrics['test_f1_macro']:.4f}")
+
+    print("=" * 60)
+
+    # 8. Save Adapter & Tokenizer
     print(f"\n💾 Saving LoRA adapter checkpoint to: {args.output_dir}")
     model.save_pretrained(args.output_dir)
     tokenizer.save_pretrained(args.output_dir)
 
-    # 8. Measure output adapter size on disk
+    # 9. Measure output adapter size on disk
     adapter_file = os.path.join(args.output_dir, "adapter_model.safetensors")
     if os.path.exists(adapter_file):
         file_size_bytes = os.path.getsize(adapter_file)
