@@ -10,7 +10,7 @@ import json
 import argparse
 import numpy as np
 import torch
-from datasets import Dataset
+from datasets import Dataset, concatenate_datasets
 from transformers import (
     AutoTokenizer,
     AutoModelForSequenceClassification,
@@ -86,18 +86,21 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"🚀 Active device: {device}")
 
-    # 1. Load dataset
-    print(f"\n📂 Loading dataset from: {args.data_path}")
+
+    # 1. Load original dataset
+    print(f"\n📂 Loading original dataset from: {args.data_path}")
 
     with open(args.data_path, "r", encoding="utf-8") as f:
-        raw_data = json.load(f)
+        original_data = json.load(f)
 
-    if not isinstance(raw_data, list):
+    if not isinstance(original_data, list):
         raise ValueError("The original dataset must be a JSON array.")
 
-    # Optionally load additional training examples
+    # Load optional additional training data
+    additional_data = []
+
     if args.additional_data_path:
-        print(f"📂 Loading additional data from: {args.additional_data_path}")
+        print(f"📂 Loading additional training data from: {args.additional_data_path}")
 
         with open(args.additional_data_path, "r", encoding="utf-8") as f:
             additional_data = json.load(f)
@@ -105,10 +108,10 @@ def main():
         if not isinstance(additional_data, list):
             raise ValueError("The additional dataset must be a JSON array.")
 
-        raw_data.extend(additional_data)
+    # Validate both datasets
+    all_data = original_data + additional_data
 
-    # Validate records and labels
-    for index, item in enumerate(raw_data, start=1):
+    for index, item in enumerate(all_data, start=1):
         if not isinstance(item, dict):
             raise ValueError(f"Invalid record at position {index}.")
 
@@ -120,27 +123,24 @@ def main():
                 f"Invalid label at position {index}: {item.get('label')}"
             )
 
-    # Detect duplicate ticket texts
     normalized_texts = [
         " ".join(item["text"].casefold().split())
-        for item in raw_data
+        for item in all_data
     ]
 
     if len(normalized_texts) != len(set(normalized_texts)):
-        raise ValueError("Duplicate ticket texts detected in the combined dataset.")
+        raise ValueError("Duplicate ticket texts detected.")
 
-    texts = [item["text"] for item in raw_data]
-    labels = [LABEL2ID[item["label"]] for item in raw_data]
+    # Create dataset from ORIGINAL examples only
+    texts = [item["text"] for item in original_data]
+    labels = [LABEL2ID[item["label"]] for item in original_data]
 
-    print(f"✅ Total tickets loaded: {len(raw_data)}")
+    dataset = Dataset.from_dict({
+        "text": texts,
+        "label": labels
+    })
 
-    for label in LABELS:
-        count = sum(item["label"] == label for item in raw_data)
-        print(f"   {label}: {count}")
-
-    dataset = Dataset.from_dict({"text": texts, "label": labels})
-
-    # Split 70% train / 30% holdout
+    # Split original dataset into training and holdout sets
     train_indices, holdout_indices = train_test_split(
         np.arange(len(dataset)),
         test_size=0.30,
@@ -148,7 +148,7 @@ def main():
         stratify=labels
     )
 
-    # Split holdout into validation and test sets
+    # Keep validation and test sets fixed across experiments
     val_indices, test_indices = train_test_split(
         holdout_indices,
         test_size=0.50,
@@ -159,6 +159,22 @@ def main():
     train_ds = dataset.select(train_indices.tolist())
     eval_ds = dataset.select(val_indices.tolist())
     test_ds = dataset.select(test_indices.tolist())
+
+    # Add new examples exclusively to the training split
+    if additional_data:
+        additional_ds = Dataset.from_dict({
+            "text": [item["text"] for item in additional_data],
+            "label": [
+                LABEL2ID[item["label"]]
+                for item in additional_data
+            ]
+        })
+
+        train_ds = concatenate_datasets([train_ds, additional_ds])
+
+    print(f"\n✅ Original tickets: {len(original_data)}")
+    print(f"✅ Additional training tickets: {len(additional_data)}")
+    print(f"✅ Total available tickets: {len(all_data)}")
 
     print(
         f"   Train: {len(train_ds)} | "
