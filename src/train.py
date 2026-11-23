@@ -10,7 +10,8 @@ import json
 import argparse
 import numpy as np
 import torch
-from datasets import Dataset, concatenate_datasets
+from datasets import Dataset
+from data_split import split_helpdesk_data
 from transformers import (
     AutoTokenizer,
     AutoModelForSequenceClassification,
@@ -25,7 +26,6 @@ from peft import (
     get_peft_model
 )
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-from sklearn.model_selection import train_test_split
 
 # Official classification labels
 LABELS = [
@@ -86,7 +86,6 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"🚀 Active device: {device}")
 
-
     # 1. Load original dataset
     print(f"\n📂 Loading original dataset from: {args.data_path}")
 
@@ -130,47 +129,24 @@ def main():
 
     if len(normalized_texts) != len(set(normalized_texts)):
         raise ValueError("Duplicate ticket texts detected.")
-
-    # Create dataset from ORIGINAL examples only
-    texts = [item["text"] for item in original_data]
-    labels = [LABEL2ID[item["label"]] for item in original_data]
-
-    dataset = Dataset.from_dict({
-        "text": texts,
-        "label": labels
-    })
-
-    # Split original dataset into training and holdout sets
-    train_indices, holdout_indices = train_test_split(
-        np.arange(len(dataset)),
-        test_size=0.30,
-        random_state=42,
-        stratify=labels
+    # Create fixed data splits for controlled experiments
+    train_records, val_records, test_records = split_helpdesk_data(
+        original_data=original_data,
+        additional_data=additional_data,
+        label_to_id=LABEL2ID,
+        seed=42
     )
 
-    # Keep validation and test sets fixed across experiments
-    val_indices, test_indices = train_test_split(
-        holdout_indices,
-        test_size=0.50,
-        random_state=42,
-        stratify=[labels[i] for i in holdout_indices]
-    )
-
-    train_ds = dataset.select(train_indices.tolist())
-    eval_ds = dataset.select(val_indices.tolist())
-    test_ds = dataset.select(test_indices.tolist())
-
-    # Add new examples exclusively to the training split
-    if additional_data:
-        additional_ds = Dataset.from_dict({
-            "text": [item["text"] for item in additional_data],
-            "label": [
-                LABEL2ID[item["label"]]
-                for item in additional_data
-            ]
+    # Convert records into Hugging Face datasets
+    def to_hf_dataset(records):
+        return Dataset.from_dict({
+            "text": [item["text"] for item in records],
+            "label": [LABEL2ID[item["label"]] for item in records]
         })
 
-        train_ds = concatenate_datasets([train_ds, additional_ds])
+    train_ds = to_hf_dataset(train_records)
+    eval_ds = to_hf_dataset(val_records)
+    test_ds = to_hf_dataset(test_records)
 
     print(f"\n✅ Original tickets: {len(original_data)}")
     print(f"✅ Additional training tickets: {len(additional_data)}")
