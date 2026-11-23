@@ -1,0 +1,363 @@
+
+[
+  {
+    "text": "The password recovery page keeps redirecting me back to the login screen.",
+    "label": "PASSWORD_RESET"
+  },
+  {
+    "text": "I never receive the verification code needed to change my work password.",
+    "label": "PASSWORD_RESET"
+  },
+  {
+    "text": "Hey, can someone help me reset my account? The recovery form isn't working.",
+    "label": "PASSWORD_RESET"
+  },
+  {
+    "text": "My temporary onboarding password is being rejected during the first sign-in.",
+    "label": "PASSWORD_RESET"
+  },
+  {
+    "text": "The reset link says it has already been used, but I haven't changed anything.",
+    "label": "PASSWORD_RESET"
+  },
+  {
+    "text": "I need to change my credentials immediately after a possible phishing incident.",
+    "label": "PASSWORD_RESET"
+  },
+  {
+    "text": "The password reset portal says my account is not eligible for self-service recovery.",
+    "label": "PASSWORD_RESET"
+  },
+  {
+    "text": "My new password meets every listed requirement, but the reset form still rejects it.",
+    "label": "PASSWORD_RESET"
+  },
+  {
+    "text": "Can't complete the password reset because my security question answers aren't accepted.",
+    "label": "PASSWORD_RESET"
+  },
+  {
+    "text": "The verification code for password recovery expires before I can submit it.",
+    "label": "PASSWORD_RESET"
+  },
+  {
+    "text": "I'm stuck on the mandatory password change screen during Windows sign-in.",
+    "label": "PASSWORD_RESET"
+  },
+  {
+    "text": "Need to reset the password for my training environment account.",
+    "label": "PASSWORD_RESET"
+  },
+  {
+    "text": "Our new employees are unable to activate their accounts using the initial passwords.",
+    "label": "PASSWORD_RESET"
+  },
+  {
+    "text": "I changed my domain password, but Remote Desktop still reports expired credentials.",
+    "label": "PASSWORD_RESET"
+  },
+  {
+    "text": "The password recovery process fails whenever I select my backup email address.",
+    "label": "PASSWORD_RESET"
+  },
+  {
+    "text": "I can sign into the company portal, but the payroll dashboard says I don't have permission to view it.",
+    "label": "ACCESS_ISSUE"
+  },
+  {
+    "text": "Hey IT, could you give me access to the marketing team's shared calendar?",
+    "label": "ACCESS_ISSUE"
+  },
+  {
+    "text": "My account works fine, but I'm blocked from opening the project documents in SharePoint.",
+    "label": "ACCESS_ISSUE"
+  },
+  {
+    "text": "After my promotion, I still can't approve expense reports because my role hasn't been updated.",
+    "label": "ACCESS_ISSUE"
+  },
+  {
+    "text": "Need temporary read-only access to the analytics database for a compliance review.",
+    "label": "ACCESS_ISSUE"
+  },
+  {
+    "text": "I was removed from a Microsoft Teams private channel and need access restored.",
+    "label": "ACCESS_ISSUE"
+  },
+  {
+    "text": "The system says my account is authenticated but not authorized to export customer records.",
+    "label": "ACCESS_ISSUE"
+  },
+  {
+    "text": "Can someone add my new colleague to the engineering repository permissions group?",
+    "label": "ACCESS_ISSUE"
+  },
+  {
+    "text": "I'm getting a 403 error when attempting to download files from our internal document archive.",
+    "label": "ACCESS_ISSUE"
+  },
+  {
+    "text": "My VPN connects successfully, but company policy blocks access to the development subnet.",
+    "label": "ACCESS_ISSUE"
+  },
+  {
+    "text": "I need permission to edit the quarterly budget spreadsheet instead of just viewing it.",
+    "label": "ACCESS_ISSUE"
+  },
+  {
+    "text": "The cloud console shows an insufficient privileges warning when I try to view the deployment logs.",
+    "label": "ACCESS_ISSUE"
+  },
+  {
+    "text": "I accidentally lost access to a shared project folder after the ownership was transferred.",
+    "label": "ACCESS_ISSUE"
+  },
+  {
+    "text": "Could you enable access to the staging API for my developer account?",
+    "label": "ACCESS_ISSUE"
+  },
+  {
+    "text": "My employee account can open the HR application, but the leave approval section is restricted.",
+    "label": "ACCESS_ISSUE"
+  },
+  {
+    "text": "My docking station loses power whenever I plug in a second monitor.",
+    "label": "HARDWARE_FAILURE"
+  },
+  {
+    "text": "The left speaker on my office headset keeps crackling during calls.",
+    "label": "HARDWARE_FAILURE"
+  },
+  {
+    "text": "The laptop only charges if I hold the power connector at an angle.",
+    "label": "HARDWARE_FAILURE"
+  },
+  {
+    "text": "My keyboard space bar came off and doesn't click into place anymore.",
+    "label": "HARDWARE_FAILURE"
+  },
+  {
+    "text": "The meeting room projector shuts down after a few minutes and shows a temperature warning.",
+    "label": "HARDWARE_FAILURE"
+  },
+  {
+    "text": "There's a weird rattling noise coming from my desktop computer.",
+    "label": "HARDWARE_FAILURE"
+  },
+  {
+    "text": "The barcode scanner at reception won't read labels even after rebooting it.",
+    "label": "HARDWARE_FAILURE"
+  },
+  {
+    "text": "Hey, my laptop touchpad randomly stops working several times a day.",
+    "label": "HARDWARE_FAILURE"
+  },
+  {
+    "text": "The USB port on my workstation feels loose and disconnects external drives when touched.",
+    "label": "HARDWARE_FAILURE"
+  },
+  {
+    "text": "Our office printer keeps pulling multiple sheets of paper at the same time.",
+    "label": "HARDWARE_FAILURE"
+  },
+  {
+    "text": "My wireless headset won't charge in its case, even with a different cable.",
+    "label": "HARDWARE_FAILURE"
+  },
+  {
+    "text": "The replacement monitor arrived with a cracked display panel.",
+    "label": "HARDWARE_FAILURE"
+  },
+  {
+    "text": "My webcam isn't detected on this laptop, even when I try a different meeting application.",
+    "label": "HARDWARE_FAILURE"
+  },
+  {
+    "text": "The mute button on our conference speakerphone is physically stuck.",
+    "label": "HARDWARE_FAILURE"
+  },
+  {
+    "text": "My external SSD keeps disconnecting whenever its cable moves slightly.",
+    "label": "HARDWARE_FAILURE"
+  },
+  {
+    "text": "New employee here. Could IT install the approved password manager on my laptop?",
+    "label": "SOFTWARE_INSTALL"
+  },
+  {
+    "text": "I need a licensed copy of Microsoft Visio for an infrastructure diagram.",
+    "label": "SOFTWARE_INSTALL"
+  },
+  {
+    "text": "Please deploy the approved Zoom desktop client to all meeting room computers.",
+    "label": "SOFTWARE_INSTALL"
+  },
+  {
+    "text": "The analytics add-in disappeared from Excel after an update. Can it be reinstalled?",
+    "label": "SOFTWARE_INSTALL"
+  },
+  {
+    "text": "Our QA team needs Postman installed on the shared testing workstation.",
+    "label": "SOFTWARE_INSTALL"
+  },
+  {
+    "text": "Can you deploy the company-approved SSH client to the support department?",
+    "label": "SOFTWARE_INSTALL"
+  },
+  {
+    "text": "The VPN software installer keeps requesting administrator credentials. Can IT complete the installation?",
+    "label": "SOFTWARE_INSTALL"
+  },
+  {
+    "text": "Need the company antivirus application reinstalled after recovering Windows.",
+    "label": "SOFTWARE_INSTALL"
+  },
+  {
+    "text": "Could you provision a license for our development IDE so I can activate it?",
+    "label": "SOFTWARE_INSTALL"
+  },
+  {
+    "text": "My new laptop is missing the corporate PDF editor. Please install it.",
+    "label": "SOFTWARE_INSTALL"
+  },
+  {
+    "text": "Can you install an approved screen reader on the shared reception computer?",
+    "label": "SOFTWARE_INSTALL"
+  },
+  {
+    "text": "I'm setting up a development environment and need Python 3.12 and JupyterLab installed.",
+    "label": "SOFTWARE_INSTALL"
+  },
+  {
+    "text": "The accounting application update keeps failing. Please reinstall the approved version.",
+    "label": "SOFTWARE_INSTALL"
+  },
+  {
+    "text": "Could someone install the official remote assistance tool on my workstation?",
+    "label": "SOFTWARE_INSTALL"
+  },
+  {
+    "text": "I need the German language pack installed for our document editing software.",
+    "label": "SOFTWARE_INSTALL"
+  },
+  {
+    "text": "Wi-Fi works in the lobby but disconnects every time I enter conference room B.",
+    "label": "NETWORK_LATENCY"
+  },
+  {
+    "text": "My Ethernet connection stays active, but video calls freeze every few seconds.",
+    "label": "NETWORK_LATENCY"
+  },
+  {
+    "text": "The branch office gets less than 1 Mbps on wired connections during the afternoon.",
+    "label": "NETWORK_LATENCY"
+  },
+  {
+    "text": "I'm getting repeated DNS resolution failures for external websites.",
+    "label": "NETWORK_LATENCY"
+  },
+  {
+    "text": "Could someone investigate why ping to the file server keeps spiking above 500 ms?",
+    "label": "NETWORK_LATENCY"
+  },
+  {
+    "text": "The guest wireless network disconnects after only one minute.",
+    "label": "NETWORK_LATENCY"
+  },
+  {
+    "text": "Uploading a small report to the intranet is taking forever today.",
+    "label": "NETWORK_LATENCY"
+  },
+  {
+    "text": "Teams audio keeps cutting out for everyone in our office at the same time.",
+    "label": "NETWORK_LATENCY"
+  },
+  {
+    "text": "The corporate VPN establishes a connection but the network tunnel keeps dropping.",
+    "label": "NETWORK_LATENCY"
+  },
+  {
+    "text": "Our shared network printer goes offline whenever the office Wi-Fi becomes unstable.",
+    "label": "NETWORK_LATENCY"
+  },
+  {
+    "text": "I can reach internal IP addresses, but public domain names won't resolve.",
+    "label": "NETWORK_LATENCY"
+  },
+  {
+    "text": "Every website times out on my workstation, but coworkers on another floor have internet.",
+    "label": "NETWORK_LATENCY"
+  },
+  {
+    "text": "Packet loss jumps to around 30 percent whenever I connect through the wired docking station.",
+    "label": "NETWORK_LATENCY"
+  },
+  {
+    "text": "The Wi-Fi signal looks strong, but webpages load painfully slowly after lunch.",
+    "label": "NETWORK_LATENCY"
+  },
+  {
+    "text": "Multiple employees are reporting unstable connections when uploading files over the company network.",
+    "label": "NETWORK_LATENCY"
+  },
+  {
+    "text": "Where can I find the official procedure to request a replacement laptop charger?",
+    "label": "GENERAL_QUERY"
+  },
+  {
+    "text": "What ticket priority should I select if a printer is down but another printer is available?",
+    "label": "GENERAL_QUERY"
+  },
+  {
+    "text": "Do external contractors follow the same IT helpdesk approval process as employees?",
+    "label": "GENERAL_QUERY"
+  },
+  {
+    "text": "How should I report a suspicious phishing email to the security team?",
+    "label": "GENERAL_QUERY"
+  },
+  {
+    "text": "When is the next scheduled maintenance window for internal applications?",
+    "label": "GENERAL_QUERY"
+  },
+  {
+    "text": "Is there a recommended folder structure for documents stored in the company cloud drive?",
+    "label": "GENERAL_QUERY"
+  },
+  {
+    "text": "Am I allowed to use my personal mouse with a company laptop?",
+    "label": "GENERAL_QUERY"
+  },
+  {
+    "text": "What's the procedure for returning company equipment when transferring departments?",
+    "label": "GENERAL_QUERY"
+  },
+  {
+    "text": "Where can I find instructions for setting up a standard email signature?",
+    "label": "GENERAL_QUERY"
+  },
+  {
+    "text": "Which IT team handles requests for new office telephone extensions?",
+    "label": "GENERAL_QUERY"
+  },
+  {
+    "text": "How long are resolved IT support tickets kept in the service desk system?",
+    "label": "GENERAL_QUERY"
+  },
+  {
+    "text": "Is there a user guide for selecting a default document scanner in Windows?",
+    "label": "GENERAL_QUERY"
+  },
+  {
+    "text": "Does IT offer onboarding sessions for employees who are new to the company?",
+    "label": "GENERAL_QUERY"
+  },
+  {
+    "text": "What's the difference between a standard support ticket and an urgent one?",
+    "label": "GENERAL_QUERY"
+  },
+  {
+    "text": "Where are the instructions for backing up documents before replacing my laptop?",
+    "label": "GENERAL_QUERY"
+  }
+]
