@@ -51,6 +51,23 @@ The primary classification criterion is the user's requested action or reported 
 - Software installation requests.
 - Network-wide connectivity problems.
 
+### Device-Related Ambiguity
+
+A reported device or peripheral malfunction does not necessarily confirm a physical hardware defect.
+
+When the primary complaint concerns a device or peripheral that is not functioning correctly, assign `HARDWARE_FAILURE` as the initial routing label unless the user explicitly requests a different action.
+
+Examples:
+
+- "My headset microphone is not detected." → `HARDWARE_FAILURE`
+- "My webcam shows a black screen." → `HARDWARE_FAILURE`
+- "Please reinstall my webcam driver." → `SOFTWARE_INSTALL`
+- "My office Wi-Fi keeps disconnecting." → `NETWORK_LATENCY`
+
+Classification represents the initial support-routing intent, not a confirmed root-cause diagnosis.
+
+If multiple intents remain equally plausible, flag the ticket for manual review.
+
 ## 4. SOFTWARE_INSTALL
 
 **Definition:** Requests to install, reinstall, deploy, license, or provision software.
