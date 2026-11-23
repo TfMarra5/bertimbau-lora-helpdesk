@@ -84,3 +84,67 @@ than previous experiments that used different test sets.
 4. Create an independent evaluation dataset using realistic
    tickets that were not used during development.
 5. Compare LoRA against a suitable baseline.
+
+
+## Detailed Error Analysis
+
+Both controlled checkpoints were evaluated with the same
+14-ticket test split using `src/evaluate.py`.
+
+### Classification Performance by Category
+
+| Category | Baseline F1 | Expanded F1 |
+|---|---:|---:|
+| PASSWORD_RESET | 0.4000 | 0.6667 |
+| ACCESS_ISSUE | 0.4000 | 0.8000 |
+| HARDWARE_FAILURE | 0.5000 | 1.0000 |
+| SOFTWARE_INSTALL | 0.6667 | 1.0000 |
+| NETWORK_LATENCY | 0.5714 | 1.0000 |
+| GENERAL_QUERY | 1.0000 | 1.0000 |
+
+### Corrected Predictions
+
+The baseline model made 6 classification errors.
+
+The expanded model corrected 5 of these errors:
+
+- Ticket #3: HARDWARE_FAILURE, previously predicted as NETWORK_LATENCY.
+- Ticket #9: SOFTWARE_INSTALL, previously predicted as PASSWORD_RESET.
+- Ticket #11: HARDWARE_FAILURE, previously predicted as NETWORK_LATENCY.
+- Ticket #12: NETWORK_LATENCY, previously predicted as ACCESS_ISSUE.
+- Ticket #13: ACCESS_ISSUE, previously predicted as PASSWORD_RESET.
+
+No previously correct test predictions became incorrect.
+
+### Remaining Classification Error
+
+Ticket #4:
+
+"Unable to access the employee portal due to forgotten credentials."
+
+- Actual label: PASSWORD_RESET
+- Predicted label: ACCESS_ISSUE
+
+This example combines an access-related symptom with
+a credential-related cause.
+
+The model appears to prioritize the access issue rather
+than the underlying need to recover credentials.
+
+This illustrates a remaining ambiguity between
+PASSWORD_RESET and ACCESS_ISSUE.
+
+### Conclusions
+
+Expanding the training dataset from 63 to 153 examples
+increased correct test predictions from 8/14 to 13/14.
+
+The expanded model performed better across five categories
+and maintained perfect F1 on GENERAL_QUERY.
+
+However, the evaluation set remains too small for strong
+generalization claims. The test examples have also been
+used in prior development experiments.
+
+Further validation should use an independent, larger
+evaluation dataset that was not consulted during development.
