@@ -67,6 +67,12 @@ def main():
     parser = argparse.ArgumentParser(description="LoRA Fine-Tuning on BERT for IT Helpdesk")
     parser.add_argument("--base_model", type=str, default="bert-base-uncased")
     parser.add_argument("--data_path", type=str, default="data/helpdesk_dataset.json")
+    parser.add_argument(
+        "--additional_data_path",
+        type=str,
+        default=None,
+        help="Optional JSON file containing additional labeled tickets"
+    )
     parser.add_argument("--output_dir", type=str, default="checkpoints/bert-lora-helpdesk")
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--batch_size", type=int, default=8)
@@ -82,11 +88,55 @@ def main():
 
     # 1. Load dataset
     print(f"\n📂 Loading dataset from: {args.data_path}")
+
     with open(args.data_path, "r", encoding="utf-8") as f:
         raw_data = json.load(f)
 
+    if not isinstance(raw_data, list):
+        raise ValueError("The original dataset must be a JSON array.")
+
+    # Optionally load additional training examples
+    if args.additional_data_path:
+        print(f"📂 Loading additional data from: {args.additional_data_path}")
+
+        with open(args.additional_data_path, "r", encoding="utf-8") as f:
+            additional_data = json.load(f)
+
+        if not isinstance(additional_data, list):
+            raise ValueError("The additional dataset must be a JSON array.")
+
+        raw_data.extend(additional_data)
+
+    # Validate records and labels
+    for index, item in enumerate(raw_data, start=1):
+        if not isinstance(item, dict):
+            raise ValueError(f"Invalid record at position {index}.")
+
+        if not isinstance(item.get("text"), str) or not item["text"].strip():
+            raise ValueError(f"Missing or empty text at position {index}.")
+
+        if item.get("label") not in LABEL2ID:
+            raise ValueError(
+                f"Invalid label at position {index}: {item.get('label')}"
+            )
+
+    # Detect duplicate ticket texts
+    normalized_texts = [
+        " ".join(item["text"].casefold().split())
+        for item in raw_data
+    ]
+
+    if len(normalized_texts) != len(set(normalized_texts)):
+        raise ValueError("Duplicate ticket texts detected in the combined dataset.")
+
     texts = [item["text"] for item in raw_data]
     labels = [LABEL2ID[item["label"]] for item in raw_data]
+
+    print(f"✅ Total tickets loaded: {len(raw_data)}")
+
+    for label in LABELS:
+        count = sum(item["label"] == label for item in raw_data)
+        print(f"   {label}: {count}")
 
     dataset = Dataset.from_dict({"text": texts, "label": labels})
 
